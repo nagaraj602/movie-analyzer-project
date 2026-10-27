@@ -1,0 +1,63 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: movie-analyzer-db-init
+  namespace: default
+  labels:
+    app.kubernetes.io/name: movie-analyzer-db-init
+    app.kubernetes.io/part-of: movie-analyzer-platform
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: movie-analyzer-db-init
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: db-initializer
+        image: postgres:17-alpine
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Checking RDS connectivity at ${DB_HOST}:${DB_PORT}..."
+          until pg_isready -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_MASTER_USER}"; do
+            echo "Waiting for PostgreSQL database to accept connections..."
+            sleep 3
+          done
+          echo "Executing init.sql database schema and seed script..."
+          PGPASSWORD="${DB_MASTER_PASSWORD}" psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_MASTER_USER}" -d postgres -f /scripts/init.sql
+          echo "Database initialization completed successfully!"
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: db-init-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: db-init-config
+              key: DB_PORT
+              optional: true
+        - name: DB_MASTER_USER
+          valueFrom:
+            configMapKeyRef:
+              name: db-init-config
+              key: DB_MASTER_USER
+              optional: true
+        - name: DB_MASTER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-init-secret
+              key: DB_MASTER_PASSWORD
+        volumeMounts:
+        - name: sql-script
+          mountPath: /scripts
+      volumes:
+      - name: sql-script
+        configMap:
+          name: movie-analyzer-init-sql

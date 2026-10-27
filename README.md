@@ -22,7 +22,7 @@ All microservices and shared libraries are maintained across five dedicated repo
 | **Main Orchestration & IaC** | [nagaraj602/movie-analyzer-project](https://github.com/nagaraj602/movie-analyzer-project.git) | Terraform AWS IaC (VPC, EKS 1.37, RDS PostgreSQL 17, Jenkins Master/Agent, Bastion), Database Init Scripts, Docker Compose |
 | **Backend Core Service** | [nagaraj602/project-movie-analyzer-backend](https://github.com/nagaraj602/project-movie-analyzer-backend.git) | Java 21/25 LTS, Spring Boot 3.5, Hibernate/JPA, Actuator, WebFlux client (**Port `7280`**) |
 | **AI/ML Model Service** | [nagaraj602/project-movie-analyzer-model](https://github.com/nagaraj602/project-movie-analyzer-model.git) | Python 3.13/3.15, Flask 3.1, TextBlob, NLTK Sentiment Polarity & Rating Engine (**Port `7380`**) |
-| **Frontend Portal** | [nagaraj602/project-movie-analyzer-frontend](https://github.com/nagaraj602/project-movie-analyzer-frontend.git) | React 19, Express 4, Node 24 LTS, White & Shades-of-White Design (**Port `7180`**) |
+| **Frontend Portal** | [nagaraj602/project-movie-analyzer-frontend](https://github.com/nagaraj602/project-movie-analyzer-frontend.git) | React 19, Express 4, Node 24 LTS (**Port `7180`**) |
 | **Jenkins Shared Libraries** | [nagaraj602/jenkins-sharedlibraries](https://github.com/nagaraj602/jenkins-sharedlibraries.git) | Reusable Jenkins Groovy steps (`trivyScan`, `sonarAnalysis`, `dockerECRImagePush`, `kubernetesEKSHelmDeploy`) |
 
 ---
@@ -37,7 +37,7 @@ The system is architected as an event-driven, decoupled microservices mesh conne
        ▼ (HTTP Port 7180)
 ┌────────────────────────────────────────────────────────┐
 │  Frontend Service (React 19 + Express Reverse Proxy)   │
-│  - White & Shades-of-White Aesthetic (No Blue)         │
+│  - Dynamic Catalog & Interactive Reviews Feed          │
 │  - Real-time Microservice Status Bar                   │
 │  - Floating Chaos Engineering Admin Panel              │
 └──────────────────────────┬─────────────────────────────┘
@@ -71,17 +71,6 @@ The microservices in this project are configured on the following dedicated port
 | **Backend Core API** | **`7280`** | HTTP | Spring Boot REST API & Actuator diagnostics | `http://localhost:7280/actuator/health` |
 | **AI/ML Model Service** | **`7380`** | HTTP | Python Flask sentiment analysis engine | `http://localhost:7380/health` |
 | **PostgreSQL Database** | **`5438`** *(host)* / `5432` *(internal)* | TCP | Relational persistence & SQL review stats | `pg_isready -p 5432` |
-
----
-
-## 🎨 UI Design System: White & Shades of White
-
-In accordance with strict brand styling requirements:
-* **Background Colors**: Pure white (`#ffffff`) complemented with elegant shades of white (`#f8fafc`, `#f1f5f9`, `#fafafa`, `#f4f4f5`).
-* **High Contrast Typography**: Rich slate charcoal (`#0f172a`, `#1e293b`, `#334155`) for crystal-clear readability.
-* **Monochrome Components**: Buttons, badges, and cards use refined slate/graphite and subtle light borders (`#e2e8f0`).
-* **Zero Blue Color**: Blue gradients (`#667eea`, `#3b82f6`, `#2563eb`, `#4338ca`) are completely avoided.
-* **Full Feature Parity**: All 6 movie cards (*Inception*, *The Dark Knight*, *Gladiator*, *Interstellar*, *Fight Club*, *The Shawshank Redemption*), live review submission, sentiment visualization, bottom status bar, and floating chaos admin panel are fully preserved.
 
 ---
 
@@ -311,8 +300,34 @@ The RDS instance runs PostgreSQL 17 in private subnets with security groups rest
 * **Password**: Configured via secrets / Terraform variables
 * **Port**: `5432`
 
-### 2. Initialize Database Tables & Seed Data
-From the bastion host or local runner with VPC connectivity:
+### 2. Automated Database Initialization (Zero Bastion SSH)
+
+To initialize the RDS database without manually logging into the bastion host, multiple automated methods are supported:
+
+#### Method A: Automated Kubernetes Job on EKS (Recommended)
+Since EKS worker nodes reside in the private subnets and have direct network connectivity to RDS, run the pre-configured database initializer Job directly via `kubectl` or your Jenkins CI/CD pipeline:
+```bash
+# Execute the automated initialization script
+./database_scripts/run-automated-db-init.sh kubernetes <RDS_ENDPOINT> <MASTER_PASSWORD>
+
+# Or execute manually via kubectl:
+kubectl create configmap movie-analyzer-init-sql --from-file=init.sql=database_scripts/init.sql --dry-run=client -o yaml | kubectl apply -f -
+kubectl create configmap db-init-config --from-literal=DB_HOST=<RDS_ENDPOINT> --dry-run=client -o yaml | kubectl apply -f -
+kubectl create secret generic db-init-secret --from-literal=DB_MASTER_PASSWORD=<MASTER_PASSWORD> --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f database_scripts/k8s-db-init-job.yaml
+kubectl wait --for=condition=complete --timeout=180s job/movie-analyzer-db-init
+```
+
+#### Method B: AWS Systems Manager (SSM) Run Command
+The bastion host is provisioned with `AmazonSSMManagedInstanceCore`. You can execute `init.sql` headlessly through the AWS API without SSH keys, opening port 22, or logging into the server:
+```bash
+./database_scripts/run-automated-db-init.sh ssm <RDS_ENDPOINT> <MASTER_PASSWORD>
+```
+
+#### Method C: Spring Boot Native Database Migration (Flyway / JPA)
+The Spring Boot backend microservice can automatically initialize its own schema upon startup when deployed inside the EKS cluster by pointing to `moviereviews` with JPA auto DDL enabled (`spring.jpa.hibernate.ddl-auto=update`).
+
+#### Method D: Direct SQL Execution (From within VPC)
 ```bash
 # Connect using psql
 psql -h <RDS_ENDPOINT> -U postgres -d postgres
