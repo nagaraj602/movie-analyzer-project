@@ -61,9 +61,9 @@ The system is architected as an event-driven, decoupled microservices mesh conne
 
 ---
 
-## 🚀 Non-Standard Port Matrix
+## 🚀 Port & Service Architecture
 
-To avoid conflicting with common developer and system services (e.g., standard ports `8080`, `5000`, `3000`, `80`, `443`), all microservices in this project use customized non-standard ports:
+The microservices in this project are configured on the following dedicated ports:
 
 | Service | Port | Protocol | Purpose | Health Endpoint |
 | :--- | :--- | :--- | :--- | :--- |
