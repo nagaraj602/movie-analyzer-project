@@ -46,7 +46,7 @@ variable "jenkins_acm_cert_arn" {
 variable "bastion_ami" {
   description = "AMI to use for the bastion host"
   type        = string
-  default     = "ami-01a00762f46d584a1"
+  default     = "ami-0d97d7f07b25dd693"
 }
 
 variable "bastion_ssh_key_name" {
