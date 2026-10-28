@@ -1,7 +1,7 @@
 variable "region" {
   description = "AWS region to deploy resources"
   type        = string
-  default     = "ap-south-1"
+  default     = "us-east-1"
 }
 
 variable "project_name" {
@@ -28,13 +28,13 @@ variable "tags" {
 variable "jenkins_master_ami" {
   description = "AMI ID to use for Jenkins master EC2 instance"
   type        = string
-  default     = "ami-01a00762f46d584a1"
+  default     = "ami-0d97d7f07b25dd693"
 }
 
 variable "jenkins_worker_ami" {
   description = "AMI ID to use for Jenkins worker EC2 instance"
   type        = string
-  default     = "ami-01a00762f46d584a1"
+  default     = "ami-0d97d7f07b25dd693"
 }
 
 variable "jenkins_acm_cert_arn" {
