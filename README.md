@@ -181,9 +181,9 @@ terraform -version
   sudo mv ./kubectl /usr/local/bin/kubectl
   kubectl version --client
   ```
-* **Helm 3**:
+* **Helm 4**:
   ```bash
-  curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4 | bash
   helm version
   ```
 
